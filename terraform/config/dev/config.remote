@@ -1,5 +1,0 @@
-region         = "eu-central-1"
-bucket         = "123456789000-tfstate"
-key            = "services/test-app/dev.tfstate"
-dynamodb_table = "123456789000-tfstate-lock"
-profile        = "123456789000"
