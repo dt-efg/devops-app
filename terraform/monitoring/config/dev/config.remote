@@ -1,0 +1,5 @@
+region         = "eu-central-1"
+bucket         = "terraform-statebucket-xcf5pp0l7t0n"
+key            = "infra/monitoring/dev.tfstate"
+dynamodb_table = "terraform-StateTable-1GGNE7OE3QHCJ"
+profile        = "default"
