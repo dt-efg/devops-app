@@ -24,6 +24,15 @@ resource "aws_alb_target_group" "target_group" {
   vpc_id      = local.vpc_id
   target_type = "ip"
 
+  health_check {
+    matcher             = "200"
+    path                = "/health"
+    timeout             = 10
+    healthy_threshold   = 3
+    unhealthy_threshold = 3
+    interval            = 300
+  }
+
   lifecycle {
     create_before_destroy = true
   }

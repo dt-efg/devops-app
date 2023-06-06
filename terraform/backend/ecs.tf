@@ -77,11 +77,12 @@ resource "aws_iam_role_policy_attachment" "task_execution_role_policy" {
 }
 
 resource "aws_ecs_service" "devops_app_service" {
-  name            = local.app_name
-  cluster         = aws_ecs_cluster.ecs_cluster.id
-  task_definition = aws_ecs_task_definition.devops_app.arn
-  launch_type     = "FARGATE"
-  desired_count   = 1
+  name                              = local.app_name
+  cluster                           = aws_ecs_cluster.ecs_cluster.id
+  task_definition                   = aws_ecs_task_definition.devops_app.arn
+  launch_type                       = "FARGATE"
+  desired_count                     = 3
+  health_check_grace_period_seconds = 300
 
   load_balancer {
     target_group_arn = aws_alb_target_group.target_group.arn
