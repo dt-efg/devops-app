@@ -1,7 +1,7 @@
 provider "aws" {
-  region = "eu-central-1"
+  region                   = "eu-central-1"
   shared_credentials_files = ["~/.aws/credentials"]
-  profile                 = "default"
+  profile                  = "default"
 
   default_tags {
     tags = local.default_tags
