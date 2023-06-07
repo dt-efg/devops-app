@@ -2,6 +2,26 @@ resource "aws_ecs_cluster" "ecs_cluster" {
   name = "${local.app_name}-cluster"
 }
 
+resource "aws_ecs_service" "devops_app_service" {
+  name                              = local.app_name
+  cluster                           = aws_ecs_cluster.ecs_cluster.id
+  task_definition                   = aws_ecs_task_definition.devops_app.arn
+  launch_type                       = "FARGATE"
+  desired_count                     = 3
+  health_check_grace_period_seconds = 300
+
+  load_balancer {
+    target_group_arn = aws_alb_target_group.target_group.arn
+    container_name   = aws_ecs_task_definition.devops_app.family
+    container_port   = 8080
+  }
+
+  network_configuration {
+    subnets         = local.private_subnet_ids
+    security_groups = [aws_security_group.ecs.id]
+  }
+}
+
 resource "aws_ecs_task_definition" "devops_app" {
   family                   = local.app_name
   container_definitions    = <<DEFINITION
@@ -74,24 +94,4 @@ data "aws_iam_policy_document" "assume_role_policy" {
 resource "aws_iam_role_policy_attachment" "task_execution_role_policy" {
   role       = aws_iam_role.task_execution_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
-}
-
-resource "aws_ecs_service" "devops_app_service" {
-  name                              = local.app_name
-  cluster                           = aws_ecs_cluster.ecs_cluster.id
-  task_definition                   = aws_ecs_task_definition.devops_app.arn
-  launch_type                       = "FARGATE"
-  desired_count                     = 3
-  health_check_grace_period_seconds = 300
-
-  load_balancer {
-    target_group_arn = aws_alb_target_group.target_group.arn
-    container_name   = aws_ecs_task_definition.devops_app.family
-    container_port   = 8080
-  }
-
-  network_configuration {
-    subnets         = local.private_subnet_ids
-    security_groups = [aws_security_group.ecs.id]
-  }
 }
