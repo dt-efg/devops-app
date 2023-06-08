@@ -12,7 +12,7 @@ on:
 
 env:
   TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform.d/plugin-cache
-  terraform_dir: terraform/${{ inputs.directory }}
+  TERRAFORM_DIR: terraform/${{ inputs.directory }}
 
 jobs:
   plan:
@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ${{ env.terraform_dir }}
+        working-directory: ${{ env.TERRAFORM_DIR }}
     permissions:
       id-token: write
       contents: read
@@ -50,10 +50,10 @@ jobs:
             -var-file=./config/dev/vars.tfvars \
             -out "plan.out"
       - name: upload plan.out
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
-         name: tf-plan-${{ inputs.directory }}-${{ github.sha}}
-         path: ${{ env.terraform_dir }}/plan.out
+         name: tf-plan-${{ inputs.directory }}-${{ github.sha }}
+         path: ${{ env.TERRAFORM_DIR }}/plan.out
 
   apply:
     name: terraform apply
@@ -61,7 +61,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ${{ env.terraform_dir }}
+        working-directory: ${{ env.TERRAFORM_DIR }}
     environment:
       name: dev
     permissions:
@@ -80,10 +80,14 @@ jobs:
         with:
           terraform_version: 1.3.2
       - name: download plan.out
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
-          name: tf-plan-${{ inputs.directory }}-${{ github.sha}}
-          path: ${{ env.terraform_dir }}
+          name: tf-plan-${{ inputs.directory }}-${{ github.sha }}
+          path: ${{ env.TERRAFORM_DIR }}
+      - name: terraform init
+        run: |
+          terraform init \
+            -backend-config=./config/dev/config.remote
       - name: terraform apply
         run: |
           terraform apply "plan.out"
