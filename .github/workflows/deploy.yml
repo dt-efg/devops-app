@@ -2,12 +2,92 @@
 name: Deploy infrastructure
 
 on:
-    workflow_dispatch:
+  workflow_dispatch:
+    inputs:
+      directory:
+        description: Directory to deploy
+        required: true
+        type: choice
+        options: [backend, vpc]
+
+env:
+  TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform.d/plugin-cache
+  TERRAFORM_DIR: terraform/${{ inputs.directory }}
 
 jobs:
-  build:
-    name: checkout
+  plan:
+    name: terraform plan
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.TERRAFORM_DIR }}
+    permissions:
+      id-token: write
+      contents: read
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v3
+      - name: Checkout repo
+        uses: actions/checkout@v3
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-region: eu-central-1
+          role-to-assume: arn:aws:iam::319011007738:role/GitHubAction-AssumeRoleWithAction
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.3.2
+      - name: terraform fmt
+        run: terraform fmt -check
+      - name: terraform init
+        run: |
+          terraform init \
+            -backend-config=./config/dev/config.remote
+      - name: terraform validate
+        run: terraform validate
+      - name: terraform plan
+        run: |
+          terraform plan \
+            -var-file=./config/dev/vars.tfvars \
+            -out "plan.out"
+      - name: upload plan.out
+        uses: actions/upload-artifact@v3
+        with:
+         name: tf-plan-${{ inputs.directory }}-${{ github.sha }}
+         path: ${{ env.TERRAFORM_DIR }}/plan.out
+
+  apply:
+    name: terraform apply
+    needs: plan
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.TERRAFORM_DIR }}
+    environment:
+      name: dev
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-region: eu-central-1
+          role-to-assume: arn:aws:iam::319011007738:role/GitHubAction-AssumeRoleWithAction
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.3.2
+      - name: download plan.out
+        uses: actions/download-artifact@v3
+        with:
+          name: tf-plan-${{ inputs.directory }}-${{ github.sha }}
+          path: ${{ env.TERRAFORM_DIR }}
+      - name: terraform init
+        run: |
+          terraform init \
+            -backend-config=./config/dev/config.remote
+      - name: terraform apply
+        run: |
+          terraform apply "plan.out"
